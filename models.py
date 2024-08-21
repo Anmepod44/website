@@ -14,7 +14,6 @@ from redis_om import (
 
 redis = get_redis_connection(host="redis",port=6379)
 
-
 class Department(EmbeddedJsonModel):
     serial_no:str
     name:str

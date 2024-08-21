@@ -22,6 +22,10 @@ templates=Jinja2Templates(directory=r"./templates")
 @app.get("/")
 def get(request:Request):
     return templates.TemplateResponse('index.html',{'request':request})
+    
+@app.get("/product")
+def get(request:Request):
+    return templates.TemplateResponse('product.html',{'request':request})
 
 @app.get("/bronze")
 def bronze_hander(request:Request):
