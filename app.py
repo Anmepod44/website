@@ -9,7 +9,7 @@ from redis_om import Migrator
 import os
 
 
-#Run the db migrator
+#Run the db migrator as we discussed.
 Migrator().run()
 app=FastAPI()
 
