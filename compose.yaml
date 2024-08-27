@@ -10,6 +10,20 @@ services:
     container_name: redis
     volumes:
       - redis_data:/data
+
+  mysql:
+    image: mysql
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=example
+      - MYSQL_ALLOW_EMPTY_PASSWORD=1
+
+    networks:
+      - net
+    container_name: mysql
+    volumes:
+      - mysqldata:/var/lib/mysql 
   
   web:
     image: nyarangamarvin545/zahlenwebsite:latest
