@@ -18,6 +18,7 @@ class ProductModel(BaseModel):
     department: DepartmentModel
     features: List[FeaturesModel]
 
+#made some changes.
 class PackageModel(BaseModel):
     name: str = Field(..., index=True)
     image: str
