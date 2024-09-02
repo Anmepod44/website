@@ -1,15 +1,15 @@
 version: '3'
 
 services:
-  redis:
-    image: redis/redis-stack
-    ports:
-      - 6379:6379
-    networks:
-      - net
-    container_name: redis
-    volumes:
-      - redis_data:/data
+  # redis:
+  #   image: redis/redis-stack
+  #   ports:
+  #     - 6379:6379
+  #   networks:
+  #     - net
+  #   container_name: redis
+  #   volumes:
+  #     - redis_data:/data
 
   mysql:
     image: mysql
@@ -33,7 +33,7 @@ services:
     networks:
       - net
     depends_on:
-      - redis
+      - mysql
 
   nginx:
     restart: unless-stopped
@@ -63,5 +63,5 @@ networks:
     driver: bridge
 
 volumes:
-  redis_data:
+  # redis_data:
   mysqldata:

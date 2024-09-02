@@ -3,14 +3,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
 from fastapi.requests import Request
+from new_model import *
 import redis
-from models import *
-from redis_om import Migrator
-import os
-
 
 #Run the db migrator as we discussed.
-Migrator().run()
 app=FastAPI()
 
 #Mount the static files
