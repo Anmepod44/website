@@ -4,9 +4,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 Base = declarative_base()
-HOST='3.13.33.220'
+HOST='mysql'
 # SQLAlchemy setup for MySQL
-engine = create_engine(f'mysql+pymysql://root:@{HOST}:3306/ZAHLENTECH_PRODUCTS')
+engine = create_engine(f'mysql+pymysql://root:example@{HOST}:3306/ZAHLENTECH_PRODUCTS')
 Session = sessionmaker(bind=engine)
 session = Session()
 
