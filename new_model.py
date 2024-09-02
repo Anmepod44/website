@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 Base = declarative_base()
 HOST='3.13.33.220'
 # SQLAlchemy setup for MySQL
-engine = create_engine(f'mysql+pymysql://root:example@3.13.33.220:3306/')
+engine = create_engine(f'mysql+pymysql://root:example@mysql:3306/')
 Session = sessionmaker(bind=engine)
 session = Session()
 
