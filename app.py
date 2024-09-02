@@ -3,10 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
 from fastapi.requests import Request
-from new_model import *
-import redis
+from db_controller import *
 
-#Run the db migrator as we discussed.
 app=FastAPI()
 
 #Mount the static files
@@ -25,28 +23,15 @@ def get(request:Request):
 
 @app.get("/bronze")
 def bronze_hander(request:Request):
-    data=Package.find((Package.name=="Bronze")).all()[0]
-    data.name="Bronze"
-    print(data)
+    data=[]
     return templates.TemplateResponse('product.html',{'request':request,'data':data})
-
-@app.get("/bronze/details")
-def details_hander(request:Request,id:int=0):
-    return templates.TemplateResponse('details.html',{'request':request})
 
 @app.get("/silver")
 def silver_hander(request:Request):
-    data=Package.find((Package.name=="Standard Package")).all()[0]
+    data=[]
     return templates.TemplateResponse('product.html',{'request':request,'data':data})
 
 @app.get("/platinum")
 def bronze_hander(request:Request):
-    data=Package.find((Package.name=="Premium Package")).all()[0]
+    data=[]
     return templates.TemplateResponse('product.html',{'request':request,'data':data})
-
-@app.get("/products")
-def get_products(Name:str="Bronze"):
-    #You should use the package id to query for products specific to that package.
-    data=Package.find((Package.name==Name)).all()[0]
-    products=data.products
-    return products

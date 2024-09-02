@@ -1,15 +1,6 @@
 version: '3'
 
 services:
-  # redis:
-  #   image: redis/redis-stack
-  #   ports:
-  #     - 6379:6379
-  #   networks:
-  #     - net
-  #   container_name: redis
-  #   volumes:
-  #     - redis_data:/data
 
   mysql:
     image: mysql
