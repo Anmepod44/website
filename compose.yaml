@@ -54,5 +54,4 @@ networks:
     driver: bridge
 
 volumes:
-  # redis_data:
   mysqldata:
