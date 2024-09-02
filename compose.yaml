@@ -9,6 +9,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=example
       - MYSQL_ALLOW_EMPTY_PASSWORD=1
+      - MYSQL_DATABASE=ZAHLENTECH
 
     networks:
       - net
