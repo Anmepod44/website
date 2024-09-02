@@ -1,4 +1,4 @@
-from database import Session
+from new_model import Session
 from db_controller import get_all_products
 
 
