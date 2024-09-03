@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
 from fastapi.requests import Request
-from db_controller import *
+# from db_controller import *
 
 app=FastAPI()
 
