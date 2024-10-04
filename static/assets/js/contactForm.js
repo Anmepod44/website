@@ -1,6 +1,6 @@
 document.getElementById("contact-form").addEventListener("submit", async function(event) {
     event.preventDefault(); // Prevent form from submitting the traditional way
-  
+    
     // Collect the form data
     const formData = {
       emp_no: document.getElementById("emp_no").value,
