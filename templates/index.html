@@ -20,7 +20,6 @@
 <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
 <script src="static/assets/js/contactForm.js"></script>
 
-
 <!-- Material Icons -->
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
@@ -666,47 +665,66 @@
           <p class="lead">We understand your needs are unique, customize your solution to fit your case.</p>
         </div>
       </div>
-    
-      <div class="row">
-          <div class="container py-4">
-            <div class="row">
-              <div class="col-lg-7 mx-auto d-flex justify-content-center flex-column">
-                <h3 class="text-center">Message Us</h3>
-                <form role="form" id="contact-form" method="post" autocomplete="off">
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-md-6">
-                        <div class="input-group input-group-dynamic mb-4">
-                          <label class="form-label">Number of Employees</label>
-                          <input class="form-control" aria-label="Business Size" type="number" name="emp_no" >
+      
+        <div class="row">
+            <div class="container py-4">
+              <div class="row">
+                <div class="col-lg-7 mx-auto d-flex justify-content-center flex-column">
+                  <h3 class="text-center">Message Us</h3>
+                  <form role="form" id="contact-form" method="POST" action="#" autocomplete="off">
+                    <div class="card-body">
+                      <div class="row">
+                        <!-- Name Field -->
+                        <div class="col-md-6">
+                          <div class="input-group input-group-dynamic mb-4">
+                            <label class="form-label">Name</label>
+                            <input class="form-control" aria-label="Name" type="text" name="name" id="name" required>
+                          </div>
+                        </div>
+                        
+                        <!-- Company Name Field -->
+                        <div class="col-md-6">
+                          <div class="input-group input-group-dynamic mb-4">
+                            <label class="form-label">Company Name</label>
+                            <input class="form-control" aria-label="Company Name" type="text" name="company_name" id="company_name" required>
+                          </div>
                         </div>
                       </div>
-                      <div class="col-md-6">
-                        <div class="input-group input-group-dynamic mb-4">
-                          <label class="form-label">Number of Employees</label>
-                          <input class="form-control" aria-label="Business Size" type="number" name="email" >
+                  
+                      <!-- Email Address Field -->
+                      <div class="mb-4">
+                        <div class="input-group input-group-dynamic">
+                          <label class="form-label">Email Address</label>
+                          <input type="email" class="form-control" name="email" id="email" required>
+                        </div>
+                      </div>
+                  
+                      <!-- Message Text Area Field -->
+                      <div class="mb-4">
+                        <div class="input-group input-group-dynamic">
+                          <textarea class="form-control" aria-label="Message" name="message" placeholder="Type your message here" id="message" rows="4" required></textarea>
+                        </div>
+                      </div>
+                  
+                      <!-- Terms and Conditions Checkbox -->
+                      <div class="row">
+                        <div class="input-group input-group-dynamic">
+                          <div class="form-check form-switch mb-4 d-flex align-items-center">
+                            <input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" checked="" required>
+                            <label class="form-check-label ms-3 mb-0" for="flexSwitchCheckDefault">
+                              I agree to the <a href="javascript:;" class="text-dark"><u>Terms and Conditions</u></a>.
+                            </label>
+                          </div>
+                        </div>
+                  
+                        <!-- Submit Button -->
+                        <div class="col-md-12">
+                          <button type="submit" id ="submit" class="btn bg-gradient-dark w-100">Send Message</button>
                         </div>
                       </div>
                     </div>
-                    <div class="mb-4">
-                      <div class="input-group input-group-dynamic">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-control" name="email">
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col-md-12">
-                        <div class="form-check form-switch mb-4 d-flex align-items-center">
-                          <input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" checked="">
-                          <label class="form-check-label ms-3 mb-0" for="flexSwitchCheckDefault">I agree to the <a href="javascript:;" class="text-dark"><u>Terms and Conditions</u></a>.</label>
-                        </div>
-                      </div>
-                      <div class="col-md-12">
-                        <button type="submit" class="btn bg-gradient-dark w-100">Send Message</button>
-                      </div>
-                    </div>
-                  </div>
                 </form>
+                
               </div>
             </div>
           </div>       
@@ -859,12 +877,7 @@
 <script src="static/assets/js/app.js"></script>
 
 
-
-
-<!-- Control Center for Material UI Kit: parallax effects, scripts for the example pages etc -->
 <!--  Google Maps Plugin    -->
-
-
 <script src="static/assets/js/material-kit.min.js?v=3.0.4" type="text/javascript"></script>
 
 
@@ -894,6 +907,63 @@
       console.error(countUp2.error);
     };
   }
+
+// This script manages the submission of the contact form and processes it asynchronously.
+document.getElementById("contact-form").addEventListener("submit", async function(event) {
+  event.preventDefault(); // Prevent the form from submitting via the browser's default method
+  
+  // Log the event object to the console for debugging purposes
+  console.log("Form submission event:", event);
+  
+  // Collect the form data from input fields
+  const formData = {
+    email: document.getElementById("email").value,
+    name: document.getElementById("name").value,
+    company_name: document.getElementById("company_name").value,
+    message: document.getElementById("message").value
+  };
+  
+  // Log the collected form data for verification purposes
+  console.log("Form data being sent:", formData);
+
+  // Replace this with your actual API Gateway URL to process the form data
+  const apiEndpoint = "https://0f5lf0mawi.execute-api.us-east-1.amazonaws.com/dep/cta";
+  
+  try {
+    // Sending form data as JSON to the specified API endpoint
+    const response = await fetch(apiEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(formData)
+    });
+
+    // Log the full response from the API for diagnostic purposes
+    console.log("API Response:", response);
+    
+    // Check if the API response was successful
+    if (response.ok) {
+      alert("Thank you! Your message has been successfully sent.");
+      
+      // Clear the form fields after successful submission
+      document.getElementById("email").value = '';
+      document.getElementById("name").value = '';
+      document.getElementById("company_name").value = '';
+      document.getElementById("message").value = '';
+
+      console.log("Form fields cleared.");
+    } else {
+      alert("Oops! There was an issue sending your message. Please try again.");
+    }
+  } catch (error) {
+    // Handle any unexpected errors that may occur during the submission process
+    alert("An unexpected error occurred while sending your message. Please try again later.");
+    console.error("Error encountered during form submission:", error);
+  }
+});
+
+
 </script>
 
 
