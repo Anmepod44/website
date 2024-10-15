@@ -18,7 +18,7 @@ templates=Jinja2Templates(directory=r"./templates")
 def get(request:Request):
 
     #Load up the data from the csv file and return only the first 5
-    data=load_zahlentech_solutions(8)
+    data=load_zahlentech_solutions(5)
     return templates.TemplateResponse('index.html', {'request': request, 'data': data})
     
 @app.get("/product")
