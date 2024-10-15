@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
 from fastapi.requests import Request
+from utils import load_zahlentech_solutions
 # from db_controller import *
 
 app=FastAPI()
@@ -15,7 +16,10 @@ templates=Jinja2Templates(directory=r"./templates")
 
 @app.get("/")
 def get(request:Request):
-    return templates.TemplateResponse('index.html',{'request':request})
+
+    #Load up the data from the csv file and return only the first 5
+    data=load_zahlentech_solutions(8)
+    return templates.TemplateResponse('index.html', {'request': request, 'data': data})
     
 @app.get("/product")
 def get(request:Request):
