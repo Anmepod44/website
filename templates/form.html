@@ -12,13 +12,28 @@
       const form = event.target;
       const formData = new FormData(form);
       
+      // Create a plain object from form data
+      const jsonData = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        business_name: formData.get('business_name'),
+        facebook: formData.get('facebook') || '#', // Default to '#' if not provided
+        linkedin: formData.get('linkedin') || '#',
+        twitter: formData.get('twitter') || '#',
+        instagram: formData.get('instagram') || '#'
+      };
+      
       const statusDiv = document.getElementById("status");
       statusDiv.innerHTML = "Request Submitted. Processing..."; // Initial message
 
       try {
         const response = await fetch(form.action, {
-          method: form.method,
-          body: formData
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(jsonData) // Send JSON data
         });
         
         const result = await response.json();
@@ -42,7 +57,7 @@
     <div class="title">ZAHLENTECH LIMITED : PERSONAL PORTFOLIO BUILDER</div>
     <div class="content">
       <!-- Deployment form -->
-      <form action="http://127.0.0.1:8000/print-form-data" method="POST" onsubmit="submitForm(event)">
+      <form action="http://0.0.0.0:8000/builder" method="POST" onsubmit="submitForm(event)">
         <div class="user-details">
           <!-- Input for Full Name -->
           <div class="input-box">

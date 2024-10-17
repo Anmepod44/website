@@ -4,6 +4,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
 from fastapi.requests import Request
 from fastapi import Form
+from builder import create_and_deploy_website
+from html_modifier import modify_personal_site_html, modify_portfolio_site_html
 
 from utils import load_zahlentech_solutions
 # from db_controller import *
@@ -28,28 +30,41 @@ def get(request:Request):
     return templates.TemplateResponse('form.html',{'request':request})
 
 @app.post("/builder")
-async def print_form_data(
-    name: str = Form(...),
-    phone: str = Form(...),
-    email: str = Form(...),
-    business_name: str = Form(...),
-    facebook: str = Form('#'),
-    linkedin: str = Form('#'),
-    twitter: str = Form('#'),
-    instagram: str = Form('#')
-):
-    # Print form data to console
-    print(f"Name: {name}")
-    print(f"Phone: {phone}")
-    print(f"Email: {email}")
-    print(f"Business Name: {business_name}")
-    print(f"Facebook: {facebook}")
-    print(f"LinkedIn: {linkedin}")
-    print(f"Twitter: {twitter}")
-    print(f"Instagram: {instagram}")
-    
-    # Return a confirmation message to the user
-    return {"message": "Form data received and printed successfully!"}
+async def deploy_website(request: Request):
+    # Parse the incoming JSON data
+    data = await request.json()
+
+    # Extract form data
+    name = data.get('name')
+    phone = data.get('phone')
+    email = data.get('email')
+    business_name = data.get('business_name')
+    cta_links = {
+        "facebook": data.get('facebook', '#'),
+        "linkedin": data.get('linkedin', '#'),
+        "twitter": data.get('twitter', '#'),
+        "instagram": data.get('instagram', '#')
+    }
+
+    # Paths for the HTML and folder (you can customize these paths or use defaults)
+    input_html = 'projects/portfolio/index.html'  # Original HTML file
+    modified_html = 'projects/personal/modified_index.html'  # Modified HTML file
+    folder_path = 'projects/personal'  # Folder with website files
+
+    # AWS region (optional)
+    region = "eu-north-1"
+
+    # Modify the HTML for the personal site (you can customize which site to deploy)
+    modify_personal_site_html(input_html, modified_html, name, phone, email, business_name, cta_links)
+
+    # Deploy the website
+    website_url = create_and_deploy_website(name, phone, email, business_name, cta_links, input_html, modified_html, folder_path, region)
+
+    # Check if the deployment was successful and return the website URL
+    if website_url:
+        return {"message": website_url}
+    else:
+        return {"message": "Website deployment failed."}
 
     
 @app.get("/product")
