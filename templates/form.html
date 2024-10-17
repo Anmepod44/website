@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAHLENTECH | BUILDER</title>
+  <link rel="stylesheet" href="static/assets/css/builder.css">
+  <script>
+    async function submitForm(event) {
+      event.preventDefault(); // Prevent the form from submitting the traditional way
+      
+      const form = event.target;
+      const formData = new FormData(form);
+      
+      const statusDiv = document.getElementById("status");
+      statusDiv.innerHTML = "Request Submitted. Processing..."; // Initial message
+
+      try {
+        const response = await fetch(form.action, {
+          method: form.method,
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          // If success, display the website link
+          statusDiv.innerHTML = `Website generated successfully! <a href="${result.message}" target="_blank">Click here to view</a>`;
+        } else {
+          // If error, display the error message
+          statusDiv.innerHTML = `Error: ${result.message}`;
+        }
+      } catch (error) {
+        statusDiv.innerHTML = `An error occurred: ${error.message}`;
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <!-- Title section -->
+    <div class="title">ZAHLENTECH LIMITED : PERSONAL PORTFOLIO BUILDER</div>
+    <div class="content">
+      <!-- Deployment form -->
+      <form action="http://127.0.0.1:8000/print-form-data" method="POST" onsubmit="submitForm(event)">
+        <div class="user-details">
+          <!-- Input for Full Name -->
+          <div class="input-box">
+            <span class="details">Full Name</span>
+            <input type="text" name="name" placeholder="Enter your name" required>
+          </div>
+          <!-- Input for Email -->
+          <div class="input-box">
+            <span class="details">Email</span>
+            <input type="email" name="email" placeholder="Enter your email" required>
+          </div>
+          <!-- Input for Phone Number -->
+          <div class="input-box">
+            <span class="details">Phone Number</span>
+            <input type="text" name="phone" placeholder="Enter your phone number" required>
+          </div>
+          <!-- Input for Business Name -->
+          <div class="input-box">
+            <span class="details">Business Name</span>
+            <input type="text" name="business_name" placeholder="Enter your business name" required>
+          </div>
+          <!-- Input for CTA Link: Facebook -->
+          <div class="input-box">
+            <span class="details">Facebook Profile (optional)</span>
+            <input type="url" name="facebook" placeholder="https://facebook.com/yourprofile">
+          </div>
+          <!-- Input for CTA Link: LinkedIn -->
+          <div class="input-box">
+            <span class="details">LinkedIn Profile (optional)</span>
+            <input type="url" name="linkedin" placeholder="https://linkedin.com/in/yourprofile">
+          </div>
+          <!-- Input for CTA Link: Twitter -->
+          <div class="input-box">
+            <span class="details">Twitter Profile (optional)</span>
+            <input type="url" name="twitter" placeholder="https://twitter.com/yourprofile">
+          </div>
+          <!-- Input for CTA Link: Instagram -->
+          <div class="input-box">
+            <span class="details">Instagram Profile (optional)</span>
+            <input type="url" name="instagram" placeholder="https://instagram.com/yourprofile">
+          </div>
+        </div>
+        <!-- Submit button -->
+        <div class="button">
+          <input type="submit" value="Build Website">
+        </div>
+      </form>
+
+      <!-- Response area -->
+      <div id="status" style="margin-top: 20px; font-size: 16px; color: #333;">
+        <!-- Status and link will be dynamically inserted here -->
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
