@@ -9,19 +9,31 @@ import mimetypes
 # Import the HTML modification function from the other module
 from html_modifier import modify_and_save_html
 
+# Hardcoded AWS credentials (for testing only!)
+AWS_ACCESS_KEY_ID = 'AKIAZI2LIG7R6DYFIHFJ'
+AWS_SECRET_ACCESS_KEY = '1up/g3ssX5C3ZLqkjlU9uKILYJwKzwbSCgCdbm0Q'
+AWS_REGION = 'eu-north-1'  # Specify your region
+
+# Initialize a session with hardcoded credentials
+session = boto3.Session(
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    region_name=AWS_REGION
+)
+
 def generate_random_bucket_name(length=8):
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 def create_s3_bucket(bucket_name, region=None):
     try:
+        s3_client = session.client('s3')  # Use session.client instead of boto3.client
         if region is None:
-            s3_client = boto3.client('s3')
             s3_client.create_bucket(Bucket=bucket_name)
         else:
-            s3_client = boto3.client('s3', region_name=region)
             s3_client.create_bucket(
                 Bucket=bucket_name,
-                CreateBucketConfiguration={'LocationConstraint': region})
+                CreateBucketConfiguration={'LocationConstraint': region}
+            )
         print(f"Bucket {bucket_name} created.")
     except ClientError as e:
         print(f"Error creating bucket: {e}")
@@ -29,7 +41,7 @@ def create_s3_bucket(bucket_name, region=None):
     return True
 
 def disable_public_access_block(bucket_name):
-    s3_client = boto3.client('s3')
+    s3_client = session.client('s3')
     try:
         s3_client.put_public_access_block(
             Bucket=bucket_name,
@@ -48,7 +60,7 @@ def disable_public_access_block(bucket_name):
 
 def upload_folder_to_s3(bucket_name, folder_path):
     """Upload an entire folder to an S3 bucket, with content type set based on the file extension"""
-    s3_client = boto3.client('s3')
+    s3_client = session.client('s3')
     try:
         for root, dirs, files in os.walk(folder_path):
             for file in files:
@@ -73,7 +85,7 @@ def upload_folder_to_s3(bucket_name, folder_path):
     return True
 
 def set_s3_bucket_policy(bucket_name):
-    s3_client = boto3.client('s3')
+    s3_client = session.client('s3')
     bucket_policy = {
         'Version': '2012-10-17',
         'Statement': [{
@@ -92,7 +104,7 @@ def set_s3_bucket_policy(bucket_name):
     return True
 
 def enable_static_website_hosting(bucket_name):
-    s3_client = boto3.client('s3')
+    s3_client = session.client('s3')
     website_configuration = {
         'IndexDocument': {'Suffix': 'index.html'},
         'ErrorDocument': {'Key': 'error.html'}
@@ -106,4 +118,4 @@ def enable_static_website_hosting(bucket_name):
     return True
 
 def get_website_url(bucket_name):
-    return f"http://{bucket_name}.s3-website.{boto3.Session().region_name}.amazonaws.com/"
+    return f"http://{bucket_name}.s3-website.{session.region_name}.amazonaws.com/"
