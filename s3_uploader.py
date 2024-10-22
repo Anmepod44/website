@@ -22,7 +22,7 @@ def create_s3_bucket(bucket_name, region=None):
             s3_client.create_bucket(
                 Bucket=bucket_name,
                 CreateBucketConfiguration={'LocationConstraint': region})
-        print(f"Bucket {bucket_name} created.")
+        print(f"Bucket {bucket_name} created..")
     except ClientError as e:
         print(f"Error creating bucket: {e}")
         return False
