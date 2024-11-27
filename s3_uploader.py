@@ -6,7 +6,7 @@ import string
 import os
 import mimetypes
 
-# Import the HTML modification function from the other module
+# Import the HTML modification function from the other module dede
 from html_modifier import modify_and_save_html
 
 def generate_random_bucket_name(length=8):
