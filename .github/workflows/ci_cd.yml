@@ -2,7 +2,7 @@ name: Build, Push, Deploy.
 
 on:
   push:
-    branches: [ master ]
+    branches: [ dev ]
 jobs:
   build_and_push:
     name: Push docker image to Docker Hub
@@ -33,7 +33,7 @@ jobs:
 
   deploy:
       runs-on: ubuntu-latest
-      if: ${{ github.ref == 'refs/heads/master' }}
+      if: ${{ github.ref == 'refs/heads/dev' }}
       needs: [ build_and_push ]
       steps:
         - name: Checkout code
