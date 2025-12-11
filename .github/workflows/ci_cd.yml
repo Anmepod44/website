@@ -31,7 +31,7 @@ jobs:
           tags: nyarangamarvin545/zahlenwebsite:latest
           labels: ${{ steps.meta.outputs.labels }}
 
-  deploy:
+  deploy: 
       runs-on: ubuntu-latest
       if: ${{ github.ref == 'refs/heads/dev' }}
       needs: [ build_and_push ]
