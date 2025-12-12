@@ -22,6 +22,6 @@ RUN npm install -g serve
 # Copy from the first stage (folder is now 'build')
 COPY --from=build /app/build ./build
 
-EXPOSE 3000
+EXPOSE 3000 
 
 CMD ["serve", "-s", "build", "-l", "3000"]
