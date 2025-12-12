@@ -3,7 +3,7 @@ name: Build, Push, Deploy
 on:
   push:
     branches: [ dev ]
-
+ 
 permissions:
   contents: read
   id-token: write
