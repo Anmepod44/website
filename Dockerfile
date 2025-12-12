@@ -1,20 +1,62 @@
-# Use the official Python base image
-FROM python:3.12-slim
+# ---------- Dockerfile (production-ready, supports build or dist) ----------
+# Build stage
+FROM node:20-alpine AS builder
 
-# Set the working directory inside the container
+# Tools needed for some packages and compression
+RUN apk add --no-cache python3 make g++ curl brotli gzip
+
 WORKDIR /app
 
-# Copy the requirements file to the working directory
-COPY requirements.txt .
+# copy package files for cache
+COPY package.json package-lock.json* ./
+RUN npm ci --production=false
 
-# Install the Python dependencies
-RUN pip install -r requirements.txt
+# copy source and build
+COPY . .
 
-# Copy the application code to the working directory
-COPY . . 
+ENV NODE_ENV=production
+ 
+# Build the app (will produce either "build/" or "dist/" depending on your vite config)
+RUN npm run build
 
-# Expose the port on which the application runs
-EXPOSE 8000
+# Helpful debug info during image build
+RUN echo ">>> PROJECT ROOT:" && ls -la /app || true
+RUN echo ">>> BUILD DIRS (root):" && ls -la /app/build || true
+RUN echo ">>> DIST DIR (root):" && ls -la /app/dist || true
 
-# Run the FastAPI application using uvicorn server
-CMD uvicorn app:app --host 0.0.0.0 --port 8000
+# Compression step — configurable build dir (default to `build`)
+ARG BUILD_DIR=build
+RUN if [ -d "$BUILD_DIR" ]; then \
+      echo "Precompressing files in $BUILD_DIR"; \
+      find "$BUILD_DIR" -type f \( -iname '*.js' -o -iname '*.css' -o -iname '*.html' -o -iname '*.svg' -o -iname '*.json' \) -print0 \
+        | xargs -0 -n1 -P4 -I{} sh -c 'gzip -9 -c "{}" > "{}.gz" && brotli -q 11 -f -o "{}.br" "{}"'; \
+    elif [ -d "dist" ]; then \
+      echo "Precompressing files in dist"; \
+      find dist -type f \( -iname '*.js' -o -iname '*.css' -o -iname '*.html' -o -iname '*.svg' -o -iname '*.json' \) -print0 \
+        | xargs -0 -n1 -P4 -I{} sh -c 'gzip -9 -c "{}" > "{}.gz" && brotli -q 11 -f -o "{}.br" "{}"'; \
+    else \
+      echo "No build or dist directory found — skipping pre-compression"; \
+    fi
+ 
+# ---------- Production stage ----------
+FROM nginx:stable-alpine
+
+# Remove default config and use your own
+RUN rm /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Accept build directory as build arg at image build time
+ARG BUILD_DIR=build
+
+# copy built assets (try BUILD_DIR first, fallback to dist)
+COPY --from=builder /app/${BUILD_DIR} /usr/share/nginx/html
+
+# ensure correct ownership
+RUN chown -R nginx:nginx /usr/share/nginx/html || true
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -qO- --timeout=2 http://localhost/ || exit 1
+
+# run nginx (default entrypoint)
