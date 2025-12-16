@@ -211,16 +211,27 @@ export async function getAnalysisResults(
     
     const duration = Date.now() - startTime;
     
-    // Log successful results fetch
+    // Debug log the raw API response structure
+    logger.debug('Raw API response structure', { sessionId }, {
+      responseKeys: Object.keys(response || {}),
+      dataKeys: Object.keys(response.data || {}),
+      recommendationsType: typeof response.data.recommendations,
+      recommendationsValue: response.data.recommendations,
+      riskAssessmentType: typeof response.data.risk_assessment,
+      roadmapType: typeof response.data.implementation_roadmap
+    });
+    
+    // Log successful results fetch with safe property access
     logger.apiRequest('Analysis results fetched successfully', {
       method: 'GET',
       endpoint,
       response: {
         overall_score: response.data.overall_score,
-        recommendations_count: response.data.recommendations.length,
-        security_score: response.data.risk_assessment.security_score,
-        compliance_score: response.data.risk_assessment.compliance_score,
-        cost_efficiency: response.data.risk_assessment.cost_efficiency
+        recommendations_count: response.data.recommendations?.length || 0,
+        security_score: response.data.risk_assessment?.security_score,
+        compliance_score: response.data.risk_assessment?.compliance_score,
+        cost_efficiency: response.data.risk_assessment?.cost_efficiency,
+        raw_response_keys: Object.keys(response.data || {})
       },
       duration,
       statusCode: 200
@@ -228,8 +239,11 @@ export async function getAnalysisResults(
 
     logger.userAction('View Analysis Results', { sessionId }, {
       overallScore: response.data.overall_score,
-      recommendationsCount: response.data.recommendations.length,
-      riskScores: response.data.risk_assessment
+      recommendationsCount: response.data.recommendations?.length || 0,
+      riskScores: response.data.risk_assessment || {},
+      hasRecommendations: !!response.data.recommendations,
+      hasRiskAssessment: !!response.data.risk_assessment,
+      hasRoadmap: !!response.data.implementation_roadmap
     });
     
     // Transform API response to internal format
@@ -458,29 +472,30 @@ function transformApiResponseToAnalysisResults(
     roi_percent: 143,
   };
 
-  // Transform recommendations to technical recommendations
-  const technicalRecommendations = apiResponse.data.recommendations.map(rec => ({
-    title: rec.category,
-    description: `${rec.description}. ${rec.impact}`,
-    priority: rec.priority as 'critical' | 'high' | 'medium' | 'low',
+  // Transform recommendations to technical recommendations (with safety check)
+  const technicalRecommendations = (apiResponse.data.recommendations || []).map(rec => ({
+    title: rec.category || 'General Recommendation',
+    description: `${rec.description || 'No description available'}${rec.impact ? '. ' + rec.impact : ''}`,
+    priority: (rec.priority as 'critical' | 'high' | 'medium' | 'low') || 'medium',
   }));
 
-  // Create timeline from implementation roadmap
+  // Create timeline from implementation roadmap (with safety checks)
+  const roadmap = apiResponse.data.implementation_roadmap || {};
   const timeline = [
     {
       phase: 'Phase 1 - Foundation',
       duration_months: 2,
-      details: apiResponse.data.implementation_roadmap.phase_1.join(', '),
+      details: (roadmap.phase_1 || []).join(', ') || 'Foundation phase activities',
     },
     {
       phase: 'Phase 2 - Implementation',
       duration_months: 3,
-      details: apiResponse.data.implementation_roadmap.phase_2.join(', '),
+      details: (roadmap.phase_2 || []).join(', ') || 'Implementation phase activities',
     },
     {
       phase: 'Phase 3 - Optimization',
       duration_months: 2,
-      details: apiResponse.data.implementation_roadmap.phase_3.join(', '),
+      details: (roadmap.phase_3 || []).join(', ') || 'Optimization phase activities',
     },
   ];
 
@@ -491,8 +506,8 @@ function transformApiResponseToAnalysisResults(
       llm: {
         timeline,
         risk_assessment: {
-          technical: `Security score: ${apiResponse.data.risk_assessment.security_score}/100. Technical risk is moderate based on current infrastructure assessment.`,
-          business: `Cost efficiency score: ${apiResponse.data.risk_assessment.cost_efficiency}/100. Business risk is low with high potential for cost savings.`,
+          technical: `Security score: ${apiResponse.data.risk_assessment?.security_score || 'N/A'}/100. Technical risk is moderate based on current infrastructure assessment.`,
+          business: `Cost efficiency score: ${apiResponse.data.risk_assessment?.cost_efficiency || 'N/A'}/100. Business risk is low with high potential for cost savings.`,
           likelihood: 'medium' as const,
         },
         technical_recommendations: technicalRecommendations,
@@ -503,7 +518,7 @@ function transformApiResponseToAnalysisResults(
         compliance_alignment: formData?.compliance && formData.compliance !== 'none' ? [
           {
             standard: formData.compliance.toUpperCase(),
-            status: `Compliance score: ${apiResponse.data.risk_assessment.compliance_score}/100`,
+            status: `Compliance score: ${apiResponse.data.risk_assessment?.compliance_score || 'N/A'}/100`,
             details: 'Compliance requirements will be addressed in the implementation phases.',
           },
         ] : [],
@@ -515,7 +530,7 @@ function transformApiResponseToAnalysisResults(
       },
     },
     meta: {
-      computed_overall_score: apiResponse.data.overall_score,
+      computed_overall_score: apiResponse.data.overall_score || 75,
       generated_at: new Date().toISOString(),
     },
   };
