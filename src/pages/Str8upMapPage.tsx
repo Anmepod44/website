@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Link } from "react-router-dom";
 import { Sparkles, Moon, Sun, ArrowLeft, ChevronRight, Loader2 } from "lucide-react";
@@ -8,6 +8,9 @@ import OnboardingStage from "../components/str8up/OnboardingStage";
 import ProcessingStage from "../components/str8up/ProcessingStage";
 import ResultsStage from "../components/str8up/ResultsStage";
 import CTAStage from "../components/str8up/CTAStage";
+import { submitOnboarding, checkProcessingStatus, getAnalysisResults } from "../services/str8up-api.service";
+import { logger } from "../lib/logger";
+import type { AnalysisResults } from "../types/str8up-map.types";
 
 type Stage = "info" | "onboarding" | "processing" | "results" | "cta";
 
@@ -22,24 +25,112 @@ export default function Str8upMapPage() {
     riskTolerance: "",
     compliance: "",
   });
+  const [sessionId, setSessionId] = useState<string>("");
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingError, setProcessingError] = useState<string>("");
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleStartAssessment = () => {
+    logger.stageTransition("info", "onboarding");
+    logger.userAction("Start Assessment Button Clicked");
     setCurrentStage("onboarding");
   };
 
-  const handleOnboardingComplete = (data: typeof formData) => {
+  const handleOnboardingComplete = async (data: typeof formData) => {
+    logger.stageTransition("onboarding", "processing");
+    
     setFormData(data);
     setCurrentStage("processing");
+    setProcessingProgress(0);
+    setProcessingError("");
     
-    // Simulate processing time
-    setTimeout(() => {
-      setCurrentStage("results");
-    }, 5000);
+    try {
+      // Submit onboarding data and get session ID
+      const response = await submitOnboarding(data);
+      setSessionId(response.sessionId);
+      
+      logger.info("Analysis session started", { sessionId: response.sessionId });
+      
+      // Start polling for processing status
+      startPolling(response.sessionId, data);
+    } catch (error) {
+      logger.error("Failed to start analysis", {}, { error: error instanceof Error ? error.message : 'Unknown error' });
+      setProcessingError("Failed to start analysis. Please try again.");
+      
+      // Stay on processing stage with error message - no fallback
+    }
+  };
+
+  const startPolling = (sessionId: string, formData: any) => {
+    const pollStatus = async () => {
+      try {
+        const statusResponse = await checkProcessingStatus(sessionId);
+        setProcessingProgress(statusResponse.progress);
+        
+        if (statusResponse.status === 'completed') {
+          // Stop polling and fetch results
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          
+          try {
+            const resultsResponse = await getAnalysisResults(sessionId, formData);
+            setAnalysisResults(resultsResponse.data);
+            logger.stageTransition("processing", "results", { sessionId });
+            setCurrentStage("results");
+          } catch (error) {
+            logger.error("Failed to fetch results after processing completion", { sessionId }, { error: error instanceof Error ? error.message : 'Unknown error' });
+            setProcessingError("Analysis completed but failed to fetch results.");
+          }
+        } else if (statusResponse.status === 'failed') {
+          // Stop polling on failure
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          logger.error("Analysis processing failed", { sessionId });
+          setProcessingError("Analysis failed. Please try again.");
+        }
+      } catch (error) {
+        logger.error("Failed to check processing status", { sessionId }, { error: error instanceof Error ? error.message : 'Unknown error' });
+        
+        // Stop polling on API errors
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setProcessingError("Failed to check analysis status. Please refresh and try again.");
+      }
+    };
+
+    // Poll immediately, then every 2 seconds
+    pollStatus();
+    pollingIntervalRef.current = setInterval(pollStatus, 2000);
   };
 
   const handleViewCTA = () => {
+    logger.stageTransition("results", "cta", { sessionId });
+    logger.userAction("View CTA Button Clicked", { sessionId });
     setCurrentStage("cta");
   };
+
+  // Log page load and cleanup polling on unmount
+  useEffect(() => {
+    logger.info("Str8Map page loaded", {}, {
+      initialStage: currentStage,
+      userAgent: navigator.userAgent,
+      referrer: document.referrer || 'direct'
+    });
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      logger.info("Str8Map page unloaded", { sessionId });
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-100 via-orange-100 to-amber-50 dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-950 transition-colors duration-300">
@@ -77,28 +168,29 @@ export default function Str8upMapPage() {
         <AnimatePresence mode="wait">
           {currentStage === "info" && (
             <InfoStage
-              key="info"
               onStartAssessment={handleStartAssessment}
             />
           )}
           {currentStage === "onboarding" && (
             <OnboardingStage
-              key="onboarding"
               onComplete={handleOnboardingComplete}
             />
           )}
           {currentStage === "processing" && (
-            <ProcessingStage key="processing" />
+            <ProcessingStage 
+              progress={processingProgress}
+              error={processingError}
+            />
           )}
           {currentStage === "results" && (
             <ResultsStage
-              key="results"
+              results={analysisResults}
               formData={formData}
               onViewCTA={handleViewCTA}
             />
           )}
           {currentStage === "cta" && (
-            <CTAStage key="cta" />
+            <CTAStage sessionId={sessionId} />
           )}
         </AnimatePresence>
       </div>

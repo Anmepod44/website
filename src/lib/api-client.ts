@@ -6,7 +6,7 @@
 class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = '/api') {
+  constructor(baseUrl: string = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api/v1' : 'https://www.zahlentech.com/api/v1')) {
     this.baseUrl = baseUrl;
   }
 

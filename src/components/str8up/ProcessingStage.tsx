@@ -25,7 +25,12 @@ const slides = [
   },
 ];
 
-export default function ProcessingStage() {
+interface ProcessingStageProps {
+  progress?: number;
+  error?: string;
+}
+
+export default function ProcessingStage({ progress = 0, error }: ProcessingStageProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -46,14 +51,44 @@ export default function ProcessingStage() {
           className="mb-12"
         >
           <div className="flex items-center justify-center gap-3 mb-6">
-            <Loader2 className="w-8 h-8 text-[#009B77] animate-spin" />
+            {error ? (
+              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm">!</span>
+              </div>
+            ) : (
+              <Loader2 className="w-8 h-8 text-[#009B77] animate-spin" />
+            )}
             <h2 className="text-2xl md:text-3xl text-[#1C2833] dark:text-white">
-              Analyzing Your Infrastructure
+              {error ? "Analysis Error" : "Analyzing Your Infrastructure"}
             </h2>
           </div>
-          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            Crunching 150+ metrics to generate your Margin-First Modernization Strategy...
-          </p>
+          {error ? (
+            <p className="text-lg text-red-600 dark:text-red-400 max-w-2xl mx-auto">
+              {error}
+            </p>
+          ) : (
+            <>
+              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-4">
+                Crunching 150+ metrics to generate your Margin-First Modernization Strategy...
+              </p>
+              {progress > 0 && (
+                <div className="max-w-md mx-auto">
+                  <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-2">
+                    <span>Progress</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                    <motion.div
+                      className="bg-[#009B77] h-2 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </motion.div>
 
         {/* Slider */}

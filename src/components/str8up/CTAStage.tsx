@@ -1,17 +1,49 @@
+import React, { useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, Mail, Phone, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, Mail, Phone, CheckCircle2, Loader2 } from "lucide-react";
+import { submitCTAForm } from "../../services/str8up-api.service";
 
-export default function CTAStage() {
+interface CTAStageProps {
+  sessionId?: string;
+}
+
+export default function CTAStage({ sessionId }: CTAStageProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    company: "",
+    phone: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
+    
+    if (!sessionId) {
+      setError("Session expired. Please restart the assessment.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      await submitCTAForm({
+        sessionId,
+        name: formData.name,
+        email: formData.email,
+        company: formData.company || undefined,
+        phone: formData.phone || undefined,
+      });
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Failed to submit CTA form:", error);
+      setError("Failed to submit form. Please try again or contact us directly.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -70,7 +102,7 @@ export default function CTAStage() {
             <div className="space-y-6 mb-8">
               <div>
                 <label htmlFor="name" className="block text-sm mb-2 text-white/90">
-                  Full Name
+                  Full Name *
                 </label>
                 <input
                   type="text"
@@ -79,13 +111,14 @@ export default function CTAStage() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="John Doe"
                   required
-                  className="w-full px-4 py-4 text-base bg-white dark:bg-slate-900 border-2 border-amber-200 dark:border-slate-700 rounded-xl text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FF7800] focus:border-transparent min-h-[56px]"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-4 text-base bg-white dark:bg-slate-900 border-2 border-amber-200 dark:border-slate-700 rounded-xl text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FF7800] focus:border-transparent min-h-[56px] disabled:opacity-50"
                 />
               </div>
 
               <div>
                 <label htmlFor="email" className="block text-sm mb-2 text-white/90">
-                  Email Address
+                  Email Address *
                 </label>
                 <input
                   type="email"
@@ -94,17 +127,64 @@ export default function CTAStage() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="john@company.com"
                   required
-                  className="w-full px-4 py-4 text-base bg-white dark:bg-slate-900 border-2 border-amber-200 dark:border-slate-700 rounded-xl text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FF7800] focus:border-transparent min-h-[56px]"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-4 text-base bg-white dark:bg-slate-900 border-2 border-amber-200 dark:border-slate-700 rounded-xl text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FF7800] focus:border-transparent min-h-[56px] disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="company" className="block text-sm mb-2 text-white/90">
+                  Company Name
+                </label>
+                <input
+                  type="text"
+                  id="company"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  placeholder="Your Company Inc."
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-4 text-base bg-white dark:bg-slate-900 border-2 border-amber-200 dark:border-slate-700 rounded-xl text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FF7800] focus:border-transparent min-h-[56px] disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm mb-2 text-white/90">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+1 (555) 123-4567"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-4 text-base bg-white dark:bg-slate-900 border-2 border-amber-200 dark:border-slate-700 rounded-xl text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#FF7800] focus:border-transparent min-h-[56px] disabled:opacity-50"
                 />
               </div>
             </div>
 
+            {error && (
+              <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg">
+                <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full px-8 py-4 text-base md:text-lg bg-[#FF7800] text-white rounded-full hover:bg-[#E66D00] transition-all flex items-center justify-center gap-2 group min-h-[56px]"
+              disabled={isSubmitting}
+              className="w-full px-8 py-4 text-base md:text-lg bg-[#FF7800] text-white rounded-full hover:bg-[#E66D00] transition-all flex items-center justify-center gap-2 group min-h-[56px] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Request Follow-Up & Final Plan
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  Request Follow-Up & Final Plan
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
           </form>
         </motion.div>
