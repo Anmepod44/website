@@ -63,7 +63,7 @@ Create a `.env` file based on `.env.example`:
 
 ```bash
 # Production
-VITE_API_BASE_URL=https://your-domain.com/api
+VITE_API_BASE_URL=https://www.zahlentech.com/api/v1
 
 # Development
 VITE_API_BASE_URL=http://localhost:8000/api
