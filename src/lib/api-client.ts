@@ -6,7 +6,7 @@
 class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = '/api') {
+  constructor(baseUrl: string = import.meta.env.VITE_API_BASE_URL || 'https://your-domain.com/api') {
     this.baseUrl = baseUrl;
   }
 
