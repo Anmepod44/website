@@ -9,6 +9,7 @@ import ProcessingStage from "../components/str8up/ProcessingStage";
 import ResultsStage from "../components/str8up/ResultsStage";
 import CTAStage from "../components/str8up/CTAStage";
 import { submitOnboarding, checkProcessingStatus, getAnalysisResults } from "../services/str8up-api.service";
+import { logger } from "../lib/logger";
 import type { AnalysisResults } from "../types/str8up-map.types";
 
 type Stage = "info" | "onboarding" | "processing" | "results" | "cta";
@@ -31,10 +32,14 @@ export default function Str8upMapPage() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleStartAssessment = () => {
+    logger.stageTransition("info", "onboarding");
+    logger.userAction("Start Assessment Button Clicked");
     setCurrentStage("onboarding");
   };
 
   const handleOnboardingComplete = async (data: typeof formData) => {
+    logger.stageTransition("onboarding", "processing");
+    
     setFormData(data);
     setCurrentStage("processing");
     setProcessingProgress(0);
@@ -45,15 +50,15 @@ export default function Str8upMapPage() {
       const response = await submitOnboarding(data);
       setSessionId(response.sessionId);
       
+      logger.info("Analysis session started", { sessionId: response.sessionId });
+      
       // Start polling for processing status
       startPolling(response.sessionId, data);
     } catch (error) {
-      console.error("Failed to start analysis:", error);
+      logger.error("Failed to start analysis", {}, { error: error instanceof Error ? error.message : 'Unknown error' });
       setProcessingError("Failed to start analysis. Please try again.");
-      // Fall back to mock behavior for development
-      setTimeout(() => {
-        setCurrentStage("results");
-      }, 3000);
+      
+      // Stay on processing stage with error message - no fallback
     }
   };
 
@@ -73,9 +78,10 @@ export default function Str8upMapPage() {
           try {
             const resultsResponse = await getAnalysisResults(sessionId, formData);
             setAnalysisResults(resultsResponse.data);
+            logger.stageTransition("processing", "results", { sessionId });
             setCurrentStage("results");
           } catch (error) {
-            console.error("Failed to fetch results:", error);
+            logger.error("Failed to fetch results after processing completion", { sessionId }, { error: error instanceof Error ? error.message : 'Unknown error' });
             setProcessingError("Analysis completed but failed to fetch results.");
           }
         } else if (statusResponse.status === 'failed') {
@@ -84,11 +90,18 @@ export default function Str8upMapPage() {
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
           }
+          logger.error("Analysis processing failed", { sessionId });
           setProcessingError("Analysis failed. Please try again.");
         }
       } catch (error) {
-        console.error("Failed to check processing status:", error);
-        // Continue polling on network errors
+        logger.error("Failed to check processing status", { sessionId }, { error: error instanceof Error ? error.message : 'Unknown error' });
+        
+        // Stop polling on API errors
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setProcessingError("Failed to check analysis status. Please refresh and try again.");
       }
     };
 
@@ -98,15 +111,24 @@ export default function Str8upMapPage() {
   };
 
   const handleViewCTA = () => {
+    logger.stageTransition("results", "cta", { sessionId });
+    logger.userAction("View CTA Button Clicked", { sessionId });
     setCurrentStage("cta");
   };
 
-  // Cleanup polling on unmount
+  // Log page load and cleanup polling on unmount
   useEffect(() => {
+    logger.info("Str8Map page loaded", {}, {
+      initialStage: currentStage,
+      userAgent: navigator.userAgent,
+      referrer: document.referrer || 'direct'
+    });
+
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
+      logger.info("Str8Map page unloaded", { sessionId });
     };
   }, []);
 

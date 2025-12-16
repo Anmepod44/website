@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '../lib/api-client';
+import { logger } from '../lib/logger';
 import type {
   OnboardingRequest,
   OnboardingResponse,
@@ -14,9 +15,8 @@ import type {
   CTAResponse,
   OnboardingFormData,
 } from '../types/str8up-map.types';
-import { generateMockAnalysisResults } from '../types/str8up-map.types';
 
-const STR8UP_BASE = '/v1/str8map';
+const STR8UP_BASE = '/str8map';
 
 /**
  * Submit onboarding form data and initiate analysis
@@ -24,6 +24,9 @@ const STR8UP_BASE = '/v1/str8map';
 export async function submitOnboarding(
   formData: OnboardingFormData
 ): Promise<OnboardingResponse> {
+  const startTime = Date.now();
+  const endpoint = `${STR8UP_BASE}/onboarding/start/`;
+  
   // Map form data to API format
   const payload = {
     business_size: formData.businessSize,
@@ -34,11 +37,40 @@ export async function submitOnboarding(
     compliance_type: formData.compliance || undefined,
   };
 
+  // Log the request initiation
+  logger.apiRequest('Starting onboarding submission', {
+    method: 'POST',
+    endpoint,
+    payload: { ...payload, compliance_type: payload.compliance_type ? '[REDACTED]' : undefined }
+  });
+
+  logger.userAction('Submit Assessment Form', {}, {
+    formData: {
+      businessSize: formData.businessSize,
+      cloudProvider: formData.cloudProvider,
+      complexity: formData.complexity,
+      budget: formData.budget,
+      riskTolerance: formData.riskTolerance,
+      hasCompliance: !!formData.compliance
+    }
+  });
+
   try {
     const response = await apiClient.post<{ sessionId: string }>(
-      `${STR8UP_BASE}/onboarding/start/`,
+      endpoint,
       payload
     );
+    
+    const duration = Date.now() - startTime;
+    
+    // Log successful response
+    logger.apiRequest('Onboarding submission successful', {
+      method: 'POST',
+      endpoint,
+      response: { sessionId: response.sessionId },
+      duration,
+      statusCode: 200
+    }, { sessionId: response.sessionId });
     
     return {
       success: true,
@@ -47,16 +79,18 @@ export async function submitOnboarding(
       processingEstimate: 5,
     };
   } catch (error) {
-    console.error('Onboarding submission failed:', error);
+    const duration = Date.now() - startTime;
     
-    // Mock response for development
-    const mockSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    return {
-      success: true,
-      sessionId: mockSessionId,
-      message: 'Analysis started successfully (mock)',
-      processingEstimate: 5,
-    };
+    // Log error
+    logger.error('Onboarding submission failed', {}, {
+      method: 'POST',
+      endpoint,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration
+    });
+    
+    // Re-throw error - no mock fallback
+    throw error;
   }
 }
 
@@ -66,12 +100,31 @@ export async function submitOnboarding(
 export async function checkProcessingStatus(
   sessionId: string
 ): Promise<ProcessingResponse> {
+  const startTime = Date.now();
+  const endpoint = `${STR8UP_BASE}/processing/${sessionId}/`;
+
   try {
     const response = await apiClient.get<{
       sessionId: string;
       status: string;
       progress: number;
-    }>(`${STR8UP_BASE}/processing/${sessionId}/`);
+    }>(endpoint);
+    
+    const duration = Date.now() - startTime;
+    
+    // Log status check (only log significant status changes to avoid spam)
+    if (response.status === 'COMPLETED' || response.status === 'FAILED' || response.progress % 25 === 0) {
+      logger.apiRequest('Processing status check', {
+        method: 'GET',
+        endpoint,
+        response: {
+          status: response.status,
+          progress: response.progress
+        },
+        duration,
+        statusCode: 200
+      }, { sessionId });
+    }
     
     // Map API response to internal format
     const statusMap: Record<string, ProcessingResponse['status']> = {
@@ -81,22 +134,39 @@ export async function checkProcessingStatus(
       'FAILED': 'failed',
     };
     
+    const mappedStatus = statusMap[response.status] || 'processing';
+    
+    // Log completion or failure
+    if (response.status === 'COMPLETED') {
+      logger.userAction('Analysis Completed', { sessionId }, {
+        finalProgress: response.progress,
+        processingTime: duration
+      });
+    } else if (response.status === 'FAILED') {
+      logger.error('Analysis Failed', { sessionId }, {
+        finalProgress: response.progress,
+        processingTime: duration
+      });
+    }
+    
     return {
-      status: statusMap[response.status] || 'processing',
+      status: mappedStatus,
       progress: response.progress,
       currentStep: response.status === 'PROCESSING' ? 'Analyzing infrastructure metrics' : undefined,
       estimatedTimeRemaining: response.progress < 100 ? Math.ceil((100 - response.progress) / 20) : 0,
     };
   } catch (error) {
-    console.error('Processing status check failed:', error);
+    const duration = Date.now() - startTime;
     
-    // Mock response for development
-    return {
-      status: 'processing',
-      progress: 75,
-      currentStep: 'Analyzing infrastructure metrics',
-      estimatedTimeRemaining: 2,
-    };
+    logger.error('Processing status check failed', { sessionId }, {
+      method: 'GET',
+      endpoint,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration
+    });
+    
+    // Re-throw error - no mock fallback
+    throw error;
   }
 }
 
@@ -107,6 +177,14 @@ export async function getAnalysisResults(
   sessionId: string,
   formData?: OnboardingFormData
 ): Promise<AnalysisResponse> {
+  const startTime = Date.now();
+  const endpoint = `${STR8UP_BASE}/analysis/${sessionId}/`;
+
+  logger.apiRequest('Fetching analysis results', {
+    method: 'GET',
+    endpoint
+  }, { sessionId });
+
   try {
     const response = await apiClient.get<{
       sessionId: string;
@@ -129,7 +207,30 @@ export async function getAnalysisResults(
           phase_3: string[];
         };
       };
-    }>(`${STR8UP_BASE}/analysis/${sessionId}/`);
+    }>(endpoint);
+    
+    const duration = Date.now() - startTime;
+    
+    // Log successful results fetch
+    logger.apiRequest('Analysis results fetched successfully', {
+      method: 'GET',
+      endpoint,
+      response: {
+        overall_score: response.data.overall_score,
+        recommendations_count: response.data.recommendations.length,
+        security_score: response.data.risk_assessment.security_score,
+        compliance_score: response.data.risk_assessment.compliance_score,
+        cost_efficiency: response.data.risk_assessment.cost_efficiency
+      },
+      duration,
+      statusCode: 200
+    }, { sessionId });
+
+    logger.userAction('View Analysis Results', { sessionId }, {
+      overallScore: response.data.overall_score,
+      recommendationsCount: response.data.recommendations.length,
+      riskScores: response.data.risk_assessment
+    });
     
     // Transform API response to internal format
     const analysisData = transformApiResponseToAnalysisResults(response, formData);
@@ -140,18 +241,17 @@ export async function getAnalysisResults(
       message: 'Analysis completed successfully',
     };
   } catch (error) {
-    console.error('Failed to fetch analysis results:', error);
+    const duration = Date.now() - startTime;
     
-    // Generate mock results for development
-    if (formData) {
-      return {
-        success: true,
-        data: generateMockAnalysisResults(formData),
-        message: 'Analysis completed successfully (mock)',
-      };
-    }
+    logger.error('Failed to fetch analysis results', { sessionId }, {
+      method: 'GET',
+      endpoint,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration
+    });
     
-    throw new Error('Unable to fetch analysis results');
+    // Re-throw error - no mock fallback
+    throw error;
   }
 }
 
@@ -161,6 +261,9 @@ export async function getAnalysisResults(
 export async function submitCTAForm(
   formData: CTARequest
 ): Promise<CTAResponse> {
+  const startTime = Date.now();
+  const endpoint = `${STR8UP_BASE}/leads/capture/`;
+  
   const payload = {
     sessionId: formData.sessionId,
     name: formData.name,
@@ -169,11 +272,50 @@ export async function submitCTAForm(
     phone: formData.phone,
   };
 
+  // Log lead capture attempt (with PII redaction)
+  logger.apiRequest('Capturing lead information', {
+    method: 'POST',
+    endpoint,
+    payload: {
+      sessionId: formData.sessionId,
+      name: '[REDACTED]',
+      email: '[REDACTED]',
+      company: formData.company || '[NOT PROVIDED]',
+      phone: formData.phone ? '[REDACTED]' : '[NOT PROVIDED]'
+    }
+  }, { sessionId: formData.sessionId });
+
+  logger.userAction('Submit Contact Information', { sessionId: formData.sessionId }, {
+    hasName: !!formData.name,
+    hasEmail: !!formData.email,
+    hasCompany: !!formData.company,
+    hasPhone: !!formData.phone
+  });
+
   try {
     const response = await apiClient.post<{
       success: boolean;
       leadId: number;
-    }>(`${STR8UP_BASE}/leads/capture/`, payload);
+    }>(endpoint, payload);
+    
+    const duration = Date.now() - startTime;
+    
+    // Log successful lead capture
+    logger.apiRequest('Lead captured successfully', {
+      method: 'POST',
+      endpoint,
+      response: {
+        success: response.success,
+        leadId: response.leadId
+      },
+      duration,
+      statusCode: 200
+    }, { sessionId: formData.sessionId });
+
+    logger.userAction('Lead Conversion Completed', { sessionId: formData.sessionId }, {
+      leadId: response.leadId,
+      conversionTime: duration
+    });
     
     return {
       success: response.success,
@@ -188,21 +330,17 @@ export async function submitCTAForm(
       ],
     };
   } catch (error) {
-    console.error('CTA submission failed:', error);
+    const duration = Date.now() - startTime;
     
-    // Mock response for development
-    return {
-      success: true,
-      message: 'Thank you! We\'ll be in touch within 24 hours. (mock)',
-      leadId: `lead_${Date.now()}`,
-      confirmationEmail: true,
-      nextSteps: [
-        'Check your email for a confirmation message',
-        'Our team will review your analysis results',
-        'Expect a follow-up call within 24 business hours',
-        'Prepare any questions about your modernization strategy',
-      ],
-    };
+    logger.error('Lead capture failed', { sessionId: formData.sessionId }, {
+      method: 'POST',
+      endpoint,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration
+    });
+    
+    // Re-throw error - no mock fallback
+    throw error;
   }
 }
 
@@ -253,6 +391,36 @@ export async function emailAnalysisResults(
 }
 
 /**
+ * Generate calculator data based on form inputs
+ */
+function generateCalculatorData(formData: OnboardingFormData) {
+  const complexityFactor = formData.complexity / 100;
+  const budgetMultiplier: Record<string, number> = {
+    'under100k': 50000,
+    '100k-500k': 150000,
+    '500k-1m': 300000,
+    '1m-5m': 500000,
+    'over5m': 800000,
+  };
+
+  const baseSpend = budgetMultiplier[formData.budget] || 300000;
+  const wasteFactor = 0.15 + (complexityFactor * 0.15); // 15-30% waste
+  const estimatedWaste = Math.round(baseSpend * wasteFactor);
+  const projectedSavings = Math.round(estimatedWaste * 0.7); // 70% of waste can be saved
+  const transformationCost = Math.round(projectedSavings * 0.7); // ~70% of annual savings
+  const roiPercent = Math.round((projectedSavings / transformationCost) * 100);
+
+  return {
+    estimated_base_spend: baseSpend,
+    waste_factor: Number(wasteFactor.toFixed(2)),
+    estimated_waste: estimatedWaste,
+    projected_annual_savings: projectedSavings,
+    estimated_transformation_cost: transformationCost,
+    roi_percent: roiPercent,
+  };
+}
+
+/**
  * Transform API response to internal analysis results format
  */
 function transformApiResponseToAnalysisResults(
@@ -281,7 +449,7 @@ function transformApiResponseToAnalysisResults(
   formData?: OnboardingFormData
 ) {
   // Generate calculator data based on form data if available
-  const calculatorData = formData ? generateMockAnalysisResults(formData).data.calculator : {
+  const calculatorData = formData ? generateCalculatorData(formData) : {
     estimated_base_spend: 300000,
     waste_factor: 0.20,
     estimated_waste: 60000,
